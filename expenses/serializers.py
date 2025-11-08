@@ -6,25 +6,31 @@ from .models import Expense, Category
 class CategoriesWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['name']
+        fields = ["name"]
+
+
+class CategoriesUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        exclude = ["id", "created_at", "updated_at", "creator"]
 
 
 class CategoriesReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id', 'name']
+        fields = ["id", "name"]
 
 
 class CategoriesDetailReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = '__all__'
+        fields = "__all__"
 
 
 class ExpensesWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expense
-        fields = '__all__'
+        exclude = ["id"]
 
 
 class ExpensesReadSerializer(serializers.ModelSerializer):
@@ -32,4 +38,12 @@ class ExpensesReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Expense
-        fields = '__all__'
+        fields = "__all__"
+
+
+class ExpensesUpdateSerializer(serializers.ModelSerializer):
+    categories = CategoriesReadSerializer(many=True)
+
+    class Meta:
+        model = Expense
+        exclude = ["id", "created_at", "updated_at", "creator"]

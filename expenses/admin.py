@@ -12,17 +12,17 @@ class CategoryInline(admin.TabularInline):
 
 
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['name', 'creator', 'created_at']
-    list_filter = ['created_at']
-    search_fields = ['name']
+    list_display = ["name", "creator", "created_at"]
+    list_filter = ["created_at"]
+    search_fields = ["name"]
 
 
 class ExpenseAdmin(admin.ModelAdmin):
-    list_display = ['value', 'spent_at', 'creator', 'created_at']
-    list_filter = ['spent_at', 'created_at']
-    search_fields = ['description']
+    list_display = ["value", "spent_at", "creator", "created_at"]
+    list_filter = ["spent_at", "created_at"]
+    search_fields = ["description"]
 
-    exclude = ('categories',)
+    exclude = ("categories",)
     inlines = [CategoryInline]
 
 
