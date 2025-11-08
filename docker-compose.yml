@@ -1,0 +1,29 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+    env_file:
+      - .env
+    command: >
+      sh -c "
+        sleep 5
+        python manage.py migrate
+        python manage.py createsuperuser --noinput --username admin --email admin@example.com || true
+        python manage.py runserver 0.0.0.0:8000
+      "  
+  db:
+    image: postgres:14
+    environment:
+      - POSTGRES_DB=my_expenses_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
