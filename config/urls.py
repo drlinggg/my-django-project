@@ -16,10 +16,11 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import RedirectView
 
-from expenses.views import hello_ping
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", include('expenses.urls')),
+    path("api/", include('expenses.urls')),
+    path('', RedirectView.as_view(url='/api/', permanent=False)),
 ]

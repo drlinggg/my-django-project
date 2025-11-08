@@ -1,7 +1,19 @@
-from django.shortcuts import render
 from django.http import HttpResponse, HttpRequest
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
-# Create your views here.
+from .models import Category, Expense
+from .serializers import (
+    CategoriesWriteSerializer,
+    CategoriesDetailReadSerializer,
+    CategoriesReadSerializer,
+    ExpensesWriteSerializer,
+    ExpensesReadSerializer,
+)
+
+from .services import *
 
 """
 REST API должен быть реализован с помощью Django REST Framework
@@ -26,7 +38,54 @@ DELETE /api/expenses/{id} - удалить расход
 
 
 def hello_ping(request: HttpRequest):
+    """ hello pong html response """
     return HttpResponse("<h1>Hello pong!</h1>")
 
+
 def hello_world(request: HttpRequest):
+    """ hello world html response """
     return HttpResponse("<h1>Hello world!</h1>")
+
+
+class ExpensesApiView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk=None):
+        # get via id
+        if pk:
+            expense = get_expense_by_id(request.user, pk)
+            serializer = ExpensesReadSerializer(expense)
+            return Response(serializer.data)
+
+        # get all via filtering
+        filters = request.query_params.dict()
+        expenses = get_expenses_with_filters(request.user, filters)
+        serializer = ExpensesReadSerializer(expenses, many=True)
+        return Response(serializer.data)
+
+        
+
+    def post(self, request):
+        pass
+
+    def put(self, request):
+        pass
+
+    def delete(self, request):
+        pass
+
+
+class CategoriesApiView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        pass
+
+    def post(self, request):
+        pass
+
+    def put(self, request):
+        pass
+
+    def delete(self, request):
+        pass

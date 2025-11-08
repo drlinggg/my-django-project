@@ -52,7 +52,7 @@ class Expense(BaseModel):
     spent_at = models.DateTimeField()
     description = models.TextField(blank=True, null=True)
     creator = models.ForeignKey(User, on_delete=models.CASCADE)
-    categories = models.ManyToManyField(Category) # TODO: fix here?
+    categories = models.ManyToManyField(Category)  # TODO: fix here?
 
     def __str__(self):
         return f"{self.value} - {self.spent_at}"
