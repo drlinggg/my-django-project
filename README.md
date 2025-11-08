@@ -4,7 +4,7 @@ git clone github.com/drlinggg/my-django-project
 cd my-django-project
 ```
 
-### Build & RUN
+### Build & Run
 1. create .env from example.env and replace some variables 
 ```
 mv example.env .env
@@ -19,6 +19,12 @@ python -c "from django.core.management.utils import get_random_secret_key; print
 docker compose up --build
 ```
 ```
+# via poetry
 poetry install --no-root
 poetry run python manage.py runserver 8000
+
+# via pip
+pip install -r requirements.txt
+python manage.py runserver 8000
 ```
+
