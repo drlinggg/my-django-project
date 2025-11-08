@@ -19,9 +19,11 @@ services:
   db:
     image: postgres:14
     environment:
-      - POSTGRES_DB=my_expenses_db
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "5433:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
 
