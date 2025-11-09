@@ -7,13 +7,16 @@ services:
       - db
     environment:
       - DB_HOST=db
+      - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME}
+      - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL}
+      - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD}
     env_file:
       - .env
     command: >
       sh -c "
         sleep 5
         python manage.py migrate
-        python manage.py createsuperuser --noinput --username admin --email admin@example.com || true
+        python manage.py shell -c 'from django.contrib.auth import get_user_model; User = get_user_model(); user, created = User.objects.get_or_create(username=\"'$DJANGO_SUPERUSER_USERNAME'\", defaults={\"email\":\"'$DJANGO_SUPERUSER_EMAIL'\", \"is_staff\":True, \"is_superuser\":True}); user.set_password(\"'$DJANGO_SUPERUSER_PASSWORD'\"); user.save()' || true
         python manage.py runserver 0.0.0.0:8000
       "  
   db:
