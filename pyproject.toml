@@ -1,7 +1,7 @@
 [project]
 name = "my-django-project"
-version = "0.1.0"
-description = "service for counting user's expenses, version: white rabbit"
+version = "0.1.3"
+description = "service for counting user's expenses, version: pretty monkey"
 authors = [
     {name = "Banakh Andrei Maksimovich", email = "banakh.andrei@mail.ru"}
 ]

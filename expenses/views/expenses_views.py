@@ -3,8 +3,13 @@ from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import NotFound, ValidationError
 
-from expenses.serializers import ExpensesReadSerializer
+from expenses.serializers import (
+    ExpensesUpdateSerializer,
+    ExpensesWriteSerializer,
+    ExpensesReadSerializer,
+)
 from expenses.services import (
     get_expense_by_id,
     get_expenses_with_filters,
@@ -28,6 +33,7 @@ class ExpensesApiView(APIView):
     Supports filtering by date range, value range, and categories for listing.
     Requires authentication for all operations.
     """
+
     permission_classes: list = [IsAuthenticated]
 
     def get(self, request: Request, pk: str | None = None) -> Response:
@@ -46,7 +52,7 @@ class ExpensesApiView(APIView):
             - categories: comma-separated list of category IDs to filter by
 
         Returns:
-            Response: 
+            Response:
                 - Single expense details if pk provided
                 - List of filtered expenses if no pk provided
 
@@ -54,12 +60,25 @@ class ExpensesApiView(APIView):
             200: Successfully retrieved data
             404: Expense not found (when pk provided)
         """
+
         if pk:
             expense = get_expense_by_id(request.user, pk)
             serializer = ExpensesReadSerializer(expense)
             return Response(serializer.data)
 
-        filters = request.query_params.dict()
+        allowed_filters = [
+            "start_date",
+            "end_date",
+            "min_value",
+            "max_value",
+            "categories",
+        ]
+        filters = {
+            key: request.query_params[key]
+            for key in allowed_filters
+            if key in request.query_params
+        }
+
         expenses = get_expenses_with_filters(request.user, filters)
         serializer = ExpensesReadSerializer(expenses, many=True)
         return Response(serializer.data)
@@ -82,12 +101,19 @@ class ExpensesApiView(APIView):
             201: Expense successfully created
             400: Invalid input data
         """
+        serializer = ExpensesWriteSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            expense = create_expense(request.user, request.data)
+            expense = create_expense(request.user, serializer.validated_data)
             serializer = ExpensesReadSerializer(expense)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Internal server error"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def put(self, request: Request, pk: str) -> Response:
         """
@@ -105,12 +131,21 @@ class ExpensesApiView(APIView):
             400: Invalid input data
             404: Expense not found
         """
+        serializer = ExpensesUpdateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            expense = update_expense(request.user, pk, request.data)
+            expense = update_expense(request.user, pk, serializer.validated_data)
             serializer = ExpensesReadSerializer(expense)
             return Response(serializer.data)
+        except NotFound as e:
+            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Internal server error", "exc_info": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def delete(self, request: Request, pk: str) -> Response:
         """
@@ -125,11 +160,15 @@ class ExpensesApiView(APIView):
 
         Status Codes:
             204: Expense successfully deleted
-            400: Deletion failed
             404: Expense not found
         """
         try:
             delete_expense(request.user, pk)
             return Response(status=status.HTTP_204_NO_CONTENT)
+        except NotFound as e:
+            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Internal server error"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

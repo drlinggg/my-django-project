@@ -1,11 +1,12 @@
 from django.contrib.auth.models import AbstractUser
+from django.db import transaction
 from django.db.models import QuerySet
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import NotFound
 
 from expenses.models import Expense, Category
-from expenses.serializers import ExpensesUpdateSerializer, ExpensesWriteSerializer
 
 
+@transaction.atomic
 def get_expenses_with_filters(
     user: AbstractUser, filters: dict[str, any] | None = None
 ) -> QuerySet[Expense]:
@@ -49,6 +50,7 @@ def get_expenses_with_filters(
     return queryset.distinct()
 
 
+@transaction.atomic
 def get_expense_by_id(user: AbstractUser, expense_id: str) -> Expense:
     """
     Get specific expense by ID for the given user
@@ -69,30 +71,20 @@ def get_expense_by_id(user: AbstractUser, expense_id: str) -> Expense:
         raise NotFound(f"Expense with id {expense_id} not found")
 
 
-def create_expense(user: AbstractUser, data: dict[str, any]) -> Expense:
+@transaction.atomic
+def create_expense(user: AbstractUser, validated_data: dict[str, any]) -> Expense:
     """
     Create a new expense for the user
 
     Args:
         user: User object - the authenticated user
-        data: dict - expense data including:
-            - value: decimal - expense amount
-            - spent_at: datetime - when expense occurred
-            - description: str - optional description
-            - categories: list - optional list of category IDs
+        data: dict - expense data
 
     Returns:
         Expense: The created expense object
-
-    Raises:
-        ValidationError: If input data is invalid
     """
-    serializer = ExpensesWriteSerializer(data=data)
-    if not serializer.is_valid():
-        raise ValidationError(serializer.errors)
-
-    expense = serializer.save(creator=user)
-    category_ids = data.get("categories", [])
+    expense = Expense.objects.create(creator=user, **validated_data)
+    category_ids = validated_data.get("categories", [])
     if category_ids:
         categories = Category.objects.filter(id__in=category_ids, creator=user)
         expense.categories.set(categories)
@@ -100,8 +92,9 @@ def create_expense(user: AbstractUser, data: dict[str, any]) -> Expense:
     return expense
 
 
+@transaction.atomic
 def update_expense(
-    user: AbstractUser, expense_id: str, data: dict[str, any]
+    user: AbstractUser, expense_id: str, validated_data: dict[str, any]
 ) -> Expense:
     """
     Update an existing expense
@@ -116,24 +109,21 @@ def update_expense(
 
     Raises:
         NotFound: If expense doesn't exist or doesn't belong to user
-        ValidationError: If input data is invalid
     """
     expense = get_expense_by_id(user, expense_id)
+    categories = validated_data.pop("categories", None)
 
-    serializer = ExpensesUpdateSerializer(expense, data=data, partial=True)
-    if not serializer.is_valid():
-        raise ValidationError(serializer.errors)
+    for attr, value in validated_data.items():
+        setattr(expense, attr, value)
+    expense.save()
 
-    updated_expense = serializer.save()
+    if categories is not None:
+        expense.categories.set(categories)
 
-    if "categories" in data:
-        category_ids = data["categories"]
-        categories = Category.objects.filter(id__in=category_ids, creator=user)
-        updated_expense.categories.set(categories)
-
-    return updated_expense
+    return expense
 
 
+@transaction.atomic
 def delete_expense(user: AbstractUser, expense_id: str) -> bool:
     """
     Delete an expense

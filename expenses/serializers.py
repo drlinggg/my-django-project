@@ -44,7 +44,9 @@ class ExpensesReadSerializer(serializers.ModelSerializer):
 
 
 class ExpensesUpdateSerializer(serializers.ModelSerializer):
-    categories = CategoriesReadSerializer(many=True)
+    categories = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Category.objects.all(), required=False
+    )
 
     class Meta:
         model = Expense

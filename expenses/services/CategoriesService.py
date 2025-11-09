@@ -1,11 +1,12 @@
 from django.contrib.auth.models import AbstractUser
+from django.db import transaction
 from django.db.models import QuerySet
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import NotFound
 
 from expenses.models import Category
-from expenses.serializers import CategoriesUpdateSerializer, CategoriesWriteSerializer
 
 
+@transaction.atomic
 def get_categories(user: AbstractUser) -> QuerySet[Category]:
     """
     Get all categories for the user
@@ -19,6 +20,7 @@ def get_categories(user: AbstractUser) -> QuerySet[Category]:
     return Category.objects.filter(creator=user).distinct()
 
 
+@transaction.atomic
 def get_category_by_id(user: AbstractUser, category_id: str) -> Category:
     """
     Get specific category by ID for the given user
@@ -39,55 +41,50 @@ def get_category_by_id(user: AbstractUser, category_id: str) -> Category:
         raise NotFound(f"Category with id {category_id} not found")
 
 
-def create_category(user: AbstractUser, data: dict) -> Category:
+@transaction.atomic
+def create_category(user: AbstractUser, validated_data: dict) -> Category:
     """
     Create a new category for the user
 
     Args:
         user: User object - the authenticated user
-        data: dict - category data including:
-            - name: str - category name
-            - description: str - optional description
-            - color: str - optional color code
+        validated_data: dict - category data
 
     Returns:
         Category: The created category object
-
-    Raises:
-        ValidationError: If input data is invalid
     """
-    serializer = CategoriesWriteSerializer(data=data)
-    if not serializer.is_valid():
-        raise ValidationError(serializer.errors)
-    category = serializer.save(creator=user)
+
+    category = Category.objects.create(creator=user, **validated_data)
     return category
 
 
-def update_category(user: AbstractUser, category_id: str, data: dict) -> Category:
+@transaction.atomic
+def update_category(
+    user: AbstractUser, category_id: str, validated_data: dict
+) -> Category:
     """
     Update an existing category
 
     Args:
         user: User object - the authenticated user
         category_id: UUID - ID of the category to update
-        data: dict - updated category data
+        validated_data: dict - updated category data
 
     Returns:
         Category: The updated category object
 
     Raises:
         NotFound: If category doesn't exist or doesn't belong to user
-        ValidationError: If input data is invalid
     """
     category = get_category_by_id(user, category_id)
+    for attr, value in validated_data.items():
+        setattr(category, attr, value)
 
-    serializer = CategoriesUpdateSerializer(category, data=data, partial=True)
-    if not serializer.is_valid():
-        raise ValidationError(serializer.errors)
-
-    return serializer.save()
+    category.save()
+    return category
 
 
+@transaction.atomic
 def delete_category(user: AbstractUser, category_id: str) -> bool:
     """
     Delete a category

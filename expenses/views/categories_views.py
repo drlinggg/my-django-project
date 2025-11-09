@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import NotFound, ValidationError
 
 from expenses.serializers import (
     CategoriesDetailReadSerializer,
@@ -14,6 +15,12 @@ from expenses.services import (
     create_category,
     update_category,
     delete_category,
+)
+
+from expenses.serializers import (
+    CategoriesWriteSerializer,
+    CategoriesUpdateSerializer,
+    CategoriesWriteSerializer,
 )
 
 
@@ -30,6 +37,7 @@ class CategoriesApiView(APIView):
 
     Requires authentication for all operations.
     """
+
     permission_classes: list = [IsAuthenticated]
 
     def get(self, request: Request, pk: str | None = None) -> Response:
@@ -72,12 +80,23 @@ class CategoriesApiView(APIView):
             201: Category successfully created
             400: Invalid input data
         """
+
+        serializer = CategoriesWriteSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            category = create_category(request.user, request.data)
-            serializer = CategoriesReadSerializer(category)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        except Exception as e:
+            category = create_category(request.user, serializer.validated_data)
+
+            read_serializer = CategoriesReadSerializer(category)
+            return Response(read_serializer.data, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response(
+                {"error": "Internal server error"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def put(self, request: Request, pk: str) -> Response:
         """
@@ -95,12 +114,21 @@ class CategoriesApiView(APIView):
             400: Invalid input data
             404: Category not found
         """
+        serializer = CategoriesUpdateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            category = update_category(request.user, pk, request.data)
-            serializer = CategoriesReadSerializer(category)
+            category = update_category(request.user, pk, serializer.validated_data)
+            serializer = CategoriesDetailReadSerializer(category)
             return Response(serializer.data)
+        except NotFound as e:
+            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Internal server error"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def delete(self, request: Request, pk: str) -> Response:
         """
@@ -115,11 +143,15 @@ class CategoriesApiView(APIView):
 
         Status Codes:
             204: Category successfully deleted
-            400: Deletion failed
             404: Category not found
         """
         try:
             delete_category(request.user, pk)
             return Response(status=status.HTTP_204_NO_CONTENT)
+        except NotFound as e:
+            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Internal server error"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
