@@ -30,9 +30,13 @@ class CategoriesDetailReadSerializer(serializers.ModelSerializer):
 
 
 class ExpensesWriteSerializer(serializers.ModelSerializer):
+    categories = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Category.objects.all(), required=False
+    )
+
     class Meta:
         model = Expense
-        exclude = ["id"]
+        exclude = ["id", "creator"]
 
 
 class ExpensesReadSerializer(serializers.ModelSerializer):
@@ -40,7 +44,7 @@ class ExpensesReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Expense
-        fields = "__all__"
+        exclude = ["creator"]
 
 
 class ExpensesUpdateSerializer(serializers.ModelSerializer):

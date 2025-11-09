@@ -83,10 +83,10 @@ def create_expense(user: AbstractUser, validated_data: dict[str, any]) -> Expens
     Returns:
         Expense: The created expense object
     """
+    categories = validated_data.pop("categories", [])
+
     expense = Expense.objects.create(creator=user, **validated_data)
-    category_ids = validated_data.get("categories", [])
-    if category_ids:
-        categories = Category.objects.filter(id__in=category_ids, creator=user)
+    if categories:
         expense.categories.set(categories)
 
     return expense

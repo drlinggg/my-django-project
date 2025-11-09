@@ -91,8 +91,8 @@ class ExpensesApiView(APIView):
             request: Request - the HTTP request object with expense data including:
                 - value: decimal - expense amount (required)
                 - spent_at: datetime - when expense occurred (required)
-                - description: str - optional description
-                - categories: list - optional list of category IDs
+                - description: str - optional description (required)
+                - categories: list - optional list of category IDs (Optimal)
 
         Returns:
             Response: Created expense data
@@ -111,7 +111,7 @@ class ExpensesApiView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response(
-                {"error": "Internal server error"},
+                {"error": "Internal server error", "exc_info": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
