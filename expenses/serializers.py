@@ -1,3 +1,5 @@
+""" All serializers are defined here """
+
 from rest_framework import serializers
 
 from .models import Expense, Category

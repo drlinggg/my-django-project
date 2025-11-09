@@ -1,4 +1,4 @@
-""" TODO DESC """
+""" All services are defined here """
 
 from .CategoriesService import (
     get_categories,

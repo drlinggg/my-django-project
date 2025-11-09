@@ -1,3 +1,5 @@
+""" All models are defined here """
+
 import uuid
 
 from django.db import models
