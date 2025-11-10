@@ -3,7 +3,7 @@ from django.db import transaction
 from django.db.models import QuerySet
 from rest_framework.exceptions import NotFound
 
-from expenses.models import Expense, Category
+from expenses.models import Expense
 
 
 @transaction.atomic

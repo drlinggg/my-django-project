@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import ValidationError
 
 from expenses.serializers import (
     ExpensesUpdateSerializer,
@@ -17,6 +17,7 @@ from expenses.services import (
     update_expense,
     delete_expense,
 )
+from .permissions import IsOwnerOrAdmin
 
 
 class ExpensesApiView(APIView):
@@ -34,7 +35,7 @@ class ExpensesApiView(APIView):
     Requires authentication for all operations.
     """
 
-    permission_classes: list = [IsAuthenticated]
+    permission_classes: list = [IsAuthenticated]  # todo add IsOwnerOrAdmin
 
     def get(self, request: Request, pk: str | None = None) -> Response:
         """
@@ -103,17 +104,11 @@ class ExpensesApiView(APIView):
         """
         serializer = ExpensesWriteSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError(str(serializer.errors))
 
-        try:
-            expense = create_expense(request.user, serializer.validated_data)
-            serializer = ExpensesReadSerializer(expense)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            return Response(
-                {"error": "Internal server error", "exc_info": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        expense = create_expense(request.user, serializer.validated_data)
+        serializer = ExpensesReadSerializer(expense)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def put(self, request: Request, pk: str) -> Response:
         """
@@ -133,19 +128,11 @@ class ExpensesApiView(APIView):
         """
         serializer = ExpensesUpdateSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError(str(serializer.errors))
 
-        try:
-            expense = update_expense(request.user, pk, serializer.validated_data)
-            serializer = ExpensesReadSerializer(expense)
-            return Response(serializer.data)
-        except NotFound as e:
-            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response(
-                {"error": "Internal server error", "exc_info": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        expense = update_expense(request.user, pk, serializer.validated_data)
+        serializer = ExpensesReadSerializer(expense)
+        return Response(serializer.data)
 
     def delete(self, request: Request, pk: str) -> Response:
         """
@@ -162,13 +149,5 @@ class ExpensesApiView(APIView):
             204: Expense successfully deleted
             404: Expense not found
         """
-        try:
-            delete_expense(request.user, pk)
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except NotFound as e:
-            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response(
-                {"error": "Internal server error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        delete_expense(request.user, pk)
+        return Response(status=status.HTTP_204_NO_CONTENT)
